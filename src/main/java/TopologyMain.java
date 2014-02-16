@@ -10,18 +10,32 @@ import bolts.WordNormalizer;
 public class TopologyMain {
 	public static void main(String[] args) throws InterruptedException {
          
-        //Topology definition
+        
+	 //Configuration
+                Config conf = new Config();
+                conf.put("wordsFile", args[0]);
+                conf.setDebug(false);
+
+	 //How many "nodes" in cluster to parallelize work
+		int numNodes=1;
+		if (args.length > 1) {
+   			try {
+				numNodes= Integer.parseInt(args[1]);
+	  		 }
+			 catch (NumberFormatException e) {
+        			System.err.println("Number of nodes " + " must be an integer");
+       				System.exit(1);
+   			 }
+		}
+
+	//Topology definition
 		TopologyBuilder builder = new TopologyBuilder();
 		builder.setSpout("word-reader",new WordReader());
 		builder.setBolt("word-normalizer", new WordNormalizer())
 			.shuffleGrouping("word-reader");
-		builder.setBolt("word-counter", new WordCounter(),1)
+		builder.setBolt("word-counter", new WordCounter(),numNodes)
 			.fieldsGrouping("word-normalizer", new Fields("word"));
 		
-        //Configuration
-		Config conf = new Config();
-		conf.put("wordsFile", args[0]);
-		conf.setDebug(false);
         //Topology run
 		conf.put(Config.TOPOLOGY_MAX_SPOUT_PENDING, 1);
 		LocalCluster cluster = new LocalCluster();
